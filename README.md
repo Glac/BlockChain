@@ -1,6 +1,6 @@
-# Project Title
+# TransCoin
 
-One Paragraph of project description goes here
+The transcoin is a block chain system that used in the Miami Campus
 
 ## Getting Started
 
