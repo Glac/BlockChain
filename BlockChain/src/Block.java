@@ -1,92 +1,58 @@
-import java.io.UnsupportedEncodingException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.sql.Timestamp;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Date;
 
 public class Block {
 	
 
-	private int previousHash;
-	private String[] data;
-	private int blockHash;
-	private Timestamp timestamp;
+	public String currHash;
+	public String prevHash; 
+	public String root_of_merkle;
+	public ArrayList<Transaction> transactions = new ArrayList<Transaction>(); //our data will be a simple message.
+	public long timeStamp; //as number of milliseconds since 1/1/1970.
+	public int nonce;
 	
-	public Block(int previousHash, String[] data) {
-		this.previousHash = previousHash;
-		this.data = data;
-		this.timestamp = new Timestamp(System.currentTimeMillis());
-		String nonce = nonceGenerator();
-		
-		Object[] contents = {Arrays.hashCode(data),timestamp,nonce, previousHash};
-		this.blockHash = Arrays.hashCode(contents);
-	}
-
-	public static  String nonceGenerator(){ 
-	    SecureRandom secureRandom = new SecureRandom();
-	    StringBuilder stringBuilder = new StringBuilder();
-	    for (int i = 0; i < 150; i++) {
-	        stringBuilder.append(secureRandom.nextInt(50));
-	    }
-	    String randomNumber = stringBuilder.toString();
-	    return randomNumber;		   	   
+	//Block Constructor.  
+	public Block(String previousHash ) {
+		this.prevHash = previousHash;
+		this.timeStamp = new Date().getTime();
+		this.currHash = getHash(); 
 	}
 	
-	/*
-	private static String encodeHex(byte[] digest) {
-	    StringBuilder sb = new StringBuilder();
-	    for (int i = 0; i < digest.length; i++) {
-	        sb.append(Integer.toString((digest[i] & 0xff) + 0x100, 16).substring(1));
-	    }
-	    return sb.toString();
-	}
-	
-	public static String digest(String alg, String input) {
-	    try {
-	        MessageDigest md = MessageDigest.getInstance(alg);
-	        byte[] buffer = input.getBytes("UTF-8");
-	        md.update(buffer);
-	        byte[] digest = md.digest();
-	        return encodeHex(digest);
-	    } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
-	        e.printStackTrace();
-	        return e.getMessage();
-	    }
-	}
-	*/
-	public int getPreviousHash() {
-		return previousHash;
-	}
-
-
-	public String[] getData() {
-		return data;
-	}
-
-
-	public int getBlockHash() {
-		return blockHash;
-	}
-
-	public void setPreviousHash(int previousHash) {
-		this.previousHash = previousHash;
-	}
-
-	public void setData(String[] data) {
-		this.data = data;
-	}
-
-	public void setBlockHash(int blockHash) {
-		this.blockHash = blockHash;
-	}
-
-	public void setTimestamp(Timestamp timestamp) {
-		this.timestamp = timestamp;
+	//Calculate new hash based on blocks contents
+	public String getHash() {
+		String calculatedhash = Utility.messageDiegest( 
+				prevHash + Long.toString(timeStamp) + Integer.toString(nonce) + root_of_merkle);
+		return calculatedhash;
 	}
 	
 	
+	//Increases nonce value until hash target is reached.
+	public void mineBlock(int difficulty) {
+		root_of_merkle = Utility.getRoot(transactions);
+		String target = Utility.getDificultyString(difficulty); //Create a string with difficulty * "0" 
+		while(!currHash.substring( 0, difficulty).equals(target)) {
+			nonce ++;
+			currHash = getHash();
+		}
+		System.out.println("Block Mined!!! : " + currHash);
+	}
 	
 	
+	//Add transactions to this block
+	public boolean addTransaction(Transaction transaction) {
+		//process transaction and check if valid, unless block is genesis block then ignore.
+		if(transaction == null) 
+			return false;		
+		if((! prevHash.equals("0"))) {
+			if((transaction.processTrans() != true)) {
+				System.out.println("Transaction failed to process. Discarded.");
+				return false;
+			}
+		}
+
+		transactions.add(transaction);
+		System.out.println("Transaction Successfully added to Block");
+		return true;
+	}
 	
 }
